@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Median &amp; Selection Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f4fa;
+  --surface: #ffffff;
+  --ink: #1e1233;
+  --muted: #62597a;
+  --line: #ddd7ea;
+  --accent: #3a1a6e;
+  --accent-ink: #ffffff;
+  --accent-soft: #ece6f8;
+  --pivot: #d4cf00;
+  --pivot-ink: #1d1c00;
+  --median-ring: #4f8f98;
+  --small-bg: #e3e0f3;
+  --large-bg: #f6e6c9;
+  --hl: #fff3a8;
+  --good: #1f7a4d;
+  --s-rand: #4f8f98;
+  --s-b3: #c8571f;
+  --s-b5: #3a1a6e;
+  --s-b7: #8a8500;
+  --s-half: #b0307a;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #120b1e;
+    --surface: #1b1230;
+    --ink: #eee9f8;
+    --muted: #a99fc2;
+    --line: #36294f;
+    --accent: #b9a1ff;
+    --accent-ink: #1a0f33;
+    --accent-soft: #2a1d47;
+    --pivot: #d8d300;
+    --pivot-ink: #1d1c00;
+    --median-ring: #6fb4be;
+    --small-bg: #2d2650;
+    --large-bg: #4a3a1f;
+    --hl: #4a4310;
+    --good: #5fd09a;
+    --s-rand: #6fb4be;
+    --s-b3: #f08a52;
+    --s-b5: #b9a1ff;
+    --s-b7: #d8d300;
+    --s-half: #ff7ac0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #120b1e;
+  --surface: #1b1230;
+  --ink: #eee9f8;
+  --muted: #a99fc2;
+  --line: #36294f;
+  --accent: #b9a1ff;
+  --accent-ink: #1a0f33;
+  --accent-soft: #2a1d47;
+  --pivot: #d8d300;
+  --pivot-ink: #1d1c00;
+  --median-ring: #6fb4be;
+  --small-bg: #2d2650;
+  --large-bg: #4a3a1f;
+  --hl: #4a4310;
+  --good: #5fd09a;
+  --s-rand: #6fb4be;
+  --s-b3: #f08a52;
+  --s-b5: #b9a1ff;
+  --s-b7: #d8d300;
+    --s-half: #ff7ac0;
+  color-scheme: dark;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+header h1 { margin: 0 0 4px; font-size: clamp(1.5rem, 3.4vw, 2.1rem); color: var(--accent); letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); max-width: 70ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.layout { display: grid; gap: 16px; margin-top: 18px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 940px) { .layout { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); } }
+.col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+h2 { font-size: 1.05rem; margin: 0 0 10px; color: var(--accent); }
+
+/* controls */
+.controls { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > label, .field > .lbl { font-size: .85rem; color: var(--muted); }
+select, input[type="number"], input[type="text"] {
+  font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; width: 100%;
+}
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: var(--bg); color: var(--ink); padding: 7px 10px; flex: 1; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+button {
+  font: inherit; cursor: pointer; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button:disabled { opacity: .45; cursor: default; }
+:focus-visible { outline: 3px solid var(--median-ring); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.custom { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.custom input { flex: 1 1 240px; width: auto; }
+.err { color: #c0392b; font-size: .9rem; min-height: 1.2em; margin-top: 4px; }
+
+/* stage */
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .85rem; color: var(--muted); margin-bottom: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line); display: inline-block; }
+.stage { min-height: 170px; overflow-x: auto; padding-bottom: 6px; }
+.sec { margin-bottom: 12px; }
+.sec-label { font-size: .85rem; color: var(--muted); margin-bottom: 5px; }
+.cells { display: flex; flex-wrap: wrap; gap: 5px; }
+.cell {
+  min-width: 36px; height: 36px; padding: 0 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 7px; background: var(--bg);
+  font-variant-numeric: tabular-nums; font-size: .95rem;
+}
+.cell.pivot { background: var(--pivot); color: var(--pivot-ink); border-color: var(--pivot); font-weight: 700; }
+.cell.small { background: var(--small-bg); }
+.cell.large { background: var(--large-bg); }
+.cell.median { box-shadow: 0 0 0 2px var(--median-ring); }
+.groups { display: flex; gap: 10px; align-items: flex-start; }
+.gcol { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.gcell-label { font-size: .75rem; color: var(--muted); }
+.empty { color: var(--muted); font-style: italic; }
+.rest { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.rest .cells { filter: blur(1.3px); opacity: .8; user-select: none; pointer-events: none; }
+.rest ~ .rest { border-top: 0; margin-top: 4px; padding-top: 0; }
+
+.secs-row { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: flex-start; }
+.secs-row .sec { margin-bottom: 0; flex: 0 1 auto; min-width: 0; }
+#algDesc { margin-top: 6px; }
+
+/* explanation */
+.explain h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.explain p { margin: 0; }
+.explain .final { color: var(--good); font-weight: 700; margin-top: 6px; }
+.stats { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; color: var(--muted); font-size: .9rem; }
+.stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.player { display: grid; gap: 10px; margin-top: 12px; }
+.player .row button { min-width: 44px; }
+
+/* side panels */
+pre.code { margin: 0; font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; line-height: 1.7; overflow-x: auto; }
+.pl { white-space: pre; padding: 0 6px; border-radius: 5px; }
+.pl.on { background: var(--hl); font-weight: 600; }
+.stack { display: grid; gap: 6px; }
+.frame { display: grid; gap: 3px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); }
+.frame.on { border-color: var(--accent); background: var(--accent-soft); }
+.frame .top { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; }
+.frame .top span:last-child { color: var(--muted); font-size: .8rem; }
+.bar { height: 6px; border-radius: 3px; background: var(--small-bg); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.hint { color: var(--muted); font-size: .9rem; margin: 0; }
+
+/* experiment */
+.exp { margin-top: 16px; }
+.exp-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
+svg.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.keys { display: flex; flex-wrap: wrap; gap: 14px; font-size: .88rem; margin: 6px 0; }
+.keys span { display: inline-flex; gap: 6px; align-items: center; }
+.keys i { width: 18px; height: 4px; border-radius: 2px; display: inline-block; }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--accent); }
+table { border-collapse: collapse; font-size: .88rem; margin-top: 8px; min-width: 100%; }
+th, td { border-bottom: 1px solid var(--line); padding: 5px 10px; text-align: right; font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+.tablewrap { overflow-x: auto; }
+footer { margin-top: 18px; color: var(--muted); font-size: .88rem; }
+@media (prefers-reduced-motion: no-preference) { .bar i { transition: width .25s ease; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Median &amp; Selection Simulator</h1>
+    <p>Step through divide-and-conquer algorithms for finding a median: the <b>two-halves</b> algorithm, and <b>FIND(A, t)</b> with a random or median-of-medians pivot. Compare how much work each one does. Companion to Lesson 1: Divide and Conquer.</p>
+  </header>
+
+  <div class="layout">
+    <div class="col">
+      <section class="card" aria-label="Settings">
+        <div class="controls">
+          <div class="field" style="grid-column: 1 / -1;">
+            <span class="lbl">Algorithm</span>
+            <div class="seg" role="group" aria-label="Algorithm">
+              <button id="algMom" aria-pressed="true">Median of medians</button>
+              <button id="algRand" aria-pressed="false">Random pivot</button>
+              <button id="algHalves" aria-pressed="false">Two halves</button>
+            </div>
+            <p class="hint" id="algDesc"></p>
+            <p class="hint" id="lenHint" hidden></p>
+          </div>
+          <div class="field">
+            <label for="b">Group size b</label>
+            <select id="b"><option>3</option><option selected>5</option><option>7</option><option>9</option></select>
+          </div>
+          <div class="field">
+            <label for="base" id="baseLbl">Base case: sort if |A| &lt;</label>
+            <select id="base"><option>4</option><option>6</option><option selected>8</option><option>12</option><option>16</option></select>
+          </div>
+          <div class="field">
+            <label for="n">Array size n: <b id="nOut">40</b></label>
+            <input id="n" type="range" min="5" max="60" value="40">
+          </div>
+          <div class="field">
+            <label for="t">Find the t-th smallest, t =</label>
+            <input id="t" type="number" min="1" value="20">
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button id="newArr" class="primary">New random array</button>
+          <button id="medBtn">Set t to median</button>
+          <button id="newSeed" title="Re-roll the random pivot choices on the same array">Re-roll random pivots</button>
+        </div>
+        <div class="custom">
+          <input id="custom" type="text" placeholder="Or type your own numbers, e.g. 7, 3, 19, 4, 25, 8" aria-label="Custom array">
+          <button id="useCustom">Use these numbers</button>
+        </div>
+        <div class="err" id="err" role="alert"></div>
+      </section>
+
+      <section class="card" aria-label="Visualization">
+        <div class="legend" id="legend"></div>
+        <div class="stage" id="stage" aria-live="polite"></div>
+      </section>
+
+      <section class="card explain" aria-label="Explanation">
+        <div aria-live="polite">
+          <h3 id="exTitle"></h3>
+          <p id="exText"></p>
+          <p class="final" id="exFinal"></p>
+        </div>
+        <div class="stats">
+          <span>Step <b id="stepNo">1</b> of <b id="stepTot">1</b></span>
+          <span>Comparisons so far: <b id="cmp">0</b></span>
+          <span id="movesWrap" hidden>Element moves so far: <b id="moves">0</b></span>
+        </div>
+        <div class="player">
+          <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Step">
+          <div class="row">
+            <button id="first" aria-label="Back to start">⏮</button>
+            <button id="prev" aria-label="Previous step">◀ Back</button>
+            <button id="play" class="primary" aria-label="Play or pause">▶ Play</button>
+            <button id="next" aria-label="Next step">Next ▶</button>
+            <button id="last" aria-label="Jump to end">⏭</button>
+            <select id="speed" aria-label="Speed">
+              <option value="1600">Slow</option><option value="900" selected>Normal</option><option value="400">Fast</option>
+            </select>
+          </div>
+          <p class="hint">Keyboard: ← → to step, space to play or pause.</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="card" aria-label="Pseudocode">
+        <h2>Pseudocode</h2>
+        <pre class="code" id="code"></pre>
+      </section>
+      <section class="card" aria-label="Recursion">
+        <h2>Recursive calls</h2>
+        <div class="stack" id="stack"></div>
+        <p class="hint" style="margin-top:8px;">Bars show each call's size relative to the original array. “Pivot search” is the recursive call on the medians; “narrowing” is the call on S₁ or S₂. In two-halves mode the calls are on A₁, A₂ and the kept middle part B.</p>
+      </section>
+    </div>
+  </div>
+
+  <section class="card exp" aria-label="Scaling experiment">
+    <h2>Does it really run in linear time?</h2>
+    <p class="hint" style="margin-bottom:10px;">Run each strategy on random arrays of growing size and count comparisons. If the algorithm is linear, comparisons per element stay flat as n grows. Sorting first would grow like log₂ n.</p>
+    <div class="exp-controls">
+      <button id="runExp" class="primary">Run experiment</button>
+      <label class="hint"><input type="checkbox" id="inclHalves"> Include the two-halves algorithm (comparisons + element moves)</label>
+      <span class="hint" id="expStatus">Averages of 5 random arrays per size, finding the median.</span>
+    </div>
+    <div id="chartBox" hidden>
+      <svg class="chart" id="chart" viewBox="0 0 700 300" role="img" aria-label="Comparisons per element versus array size"></svg>
+      <div class="keys" id="keys"></div>
+      <details>
+        <summary>Show the numbers</summary>
+        <div class="tablewrap"><table id="tbl"></table></div>
+      </details>
+      <p class="hint" style="margin-top:10px;">Why b matters: with b = 5 the two recursive calls cost n/5 + 3n/4 = 0.95n, which is below n, so the total is linear. With b = 3 they cost n/3 + 2n/3 = n, so the worst-case bound is only n log n. On random inputs the difference can be small, since the bound is about worst-case inputs. Random pivots usually use fewer comparisons in practice, but only median of medians guarantees linear time on every input.</p>
+      <p class="hint" id="halvesNote" hidden style="margin-top:10px;">The two-halves algorithm satisfies T(n) = 3T(n/2) + n, which grows like n<sup>1.58</sup>. Its cost per element keeps climbing, while sorting first costs about log₂ n per element, so for large n sorting beats it.</p>
+    </div>
+  </section>
+
+  <footer>Conventions: t-th smallest (1 = minimum); the median is the ⌈n/2⌉-th smallest. In FIND, S₁ holds elements smaller than the pivot and S₂ larger ones. Equal values are ordered by position, so no two elements ever tie (in the two-halves algorithm this means m₁ ≠ m₂). The two-halves algorithm finds only the median, and its base case is at least 6 so that every recursive call is strictly smaller. Adjust the base case above to see the recursion go deeper or shallower.</footer>
+</div>
+
+<script>
+// ==CORE==
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function makeItems(vals){return vals.map((v,i)=>({v:v,id:i}));}
+function rawLess(a,b){return a.v<b.v||(a.v===b.v&&a.id<b.id);}
+function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+function makeCtx(o){
+  const ctx={alg:o.alg,b:o.b,base:o.alg==='halves'?Math.max(o.base,6):o.base,trace:!!o.trace,cmp:0,moves:0,calls:0,frames:[],stack:[],rng:mulberry32(o.seed||1)};
+  ctx.less=function(a,b){ctx.cmp++;return rawLess(a,b);};
+  ctx.emit=function(f){if(!ctx.trace)return;f.cmp=ctx.cmp;f.moves=ctx.moves;f.stack=ctx.stack.map(s=>({n:s.n,t:s.t,purpose:s.purpose,arr:s.arr}));ctx.frames.push(f);};
+  return ctx;
+}
+function insertionSort(arr,ctx){
+  const a=arr.slice();
+  for(let i=1;i<a.length;i++){const x=a[i];let j=i-1;while(j>=0&&ctx.less(x,a[j])){a[j+1]=a[j];j--;}a[j+1]=x;}
+  return a;
+}
+function flatView(items,cls,label){
+  return {type:'cols',sections:[{label:label||null,items:items.map(it=>({it:it,cls:(cls&&cls[it.id])||''}))}]};
+}
+function chunk(arr,b){const out=[];for(let i=0;i<arr.length;i+=b)out.push(arr.slice(i,i+b));return out;}
+function guaranteeView(sortedGroups,k){
+  let low=0,high=0;
+  const groups=sortedGroups.map(g=>{
+    const m=Math.floor((g.length-1)/2);
+    const medLE=(g[m]===k)||rawLess(g[m],k);
+    return g.map((it,i)=>{
+      let cls='';
+      if(it===k)cls='pivot';
+      else if(medLE&&i<=m){cls='small';low++;}
+      else if(!medLE&&i>=m){cls='large';high++;}
+      if(i===m&&it!==k)cls+=' median';
+      return {it:it,cls:cls};
+    });
+  });
+  return {groups:groups,low:low,high:high};
+}
+function select(arr,t,ctx,purpose){
+  const n=arr.length;
+  ctx.stack.push({n:n,t:t,purpose:purpose,arr:arr});
+  let result;
+  if(purpose==='pivot'){
+    ctx.emit({line:'sig',title:'Recursive call on the medians',text:'This call finds the median of the group medians (the '+ordinal(t)+' smallest of '+n+' values). That median becomes the pivot of the call above.',view:flatView(arr)});
+  }else if(purpose==='start'){
+    ctx.emit({line:'sig',title:'Start: find the '+ordinal(t)+' smallest of '+n+' elements',text:ctx.alg==='mom'?'The pivot will come from the median of group medians, which guarantees a balanced split.':'The pivot will be chosen at random.',view:flatView(arr)});
+  }else{
+    ctx.emit({line:'sig',title:'Recursive call: '+n+' elements, t = '+t,text:'Still looking for the '+ordinal(t)+' smallest, now among only '+n+' elements.',view:flatView(arr)});
+  }
+  if(n<ctx.base){
+    const before=ctx.cmp;
+    const s=insertionSort(arr,ctx);
+    result=s[t-1];
+    const cls={};cls[result.id]='pivot';
+    ctx.emit({line:'base',title:'Base case: sort and read off the answer',text:'Only '+n+' elements (fewer than '+ctx.base+'), so sort them directly ('+(ctx.cmp-before)+' comparisons) and return element number '+t+'.',view:flatView(s,cls,'Sorted')});
+    ctx.stack.pop();
+    return result;
+  }
+  let k;
+  if(ctx.alg==='rand'){
+    k=arr[Math.floor(ctx.rng()*n)];
+    const cls={};cls[k.id]='pivot';
+    ctx.emit({line:'pivot',title:'Pick a random pivot',text:'Pivot k = '+k.v+', chosen uniformly at random from the '+n+' elements.',view:flatView(arr,cls)});
+  }else{
+    const groups=chunk(arr,ctx.b);
+    ctx.emit({line:'divide',title:'Divide into groups of '+ctx.b,text:'Split the '+n+' elements into '+groups.length+' groups of '+ctx.b+(n%ctx.b?' (the last group is smaller)':'')+'.',view:{type:'groups',label:'Groups',groups:groups.map(g=>g.map(it=>({it:it,cls:''})))}});
+    const before=ctx.cmp;
+    const sg=groups.map(g=>insertionSort(g,ctx));
+    const medians=sg.map(g=>g[Math.floor((g.length-1)/2)]);
+    const medSet={};medians.forEach(m=>{medSet[m.id]=true;});
+    ctx.emit({line:'sortg',title:'Sort each group',text:'Sorting groups this small is cheap ('+(ctx.cmp-before)+' comparisons in total). Each group is shown smallest to largest from top to bottom; the ringed value is its median.',view:{type:'groups',label:'Sorted groups',groups:sg.map(g=>g.map((it,i)=>({it:it,cls:i===Math.floor((g.length-1)/2)?'median':''})))}});
+    const mcls={};medians.forEach(m=>{mcls[m.id]='median';});
+    ctx.emit({line:'med',title:'Collect the medians into B',text:'B holds the '+medians.length+' group medians, so |B| is about n/'+ctx.b+'. Next, recursively find the median of B.',view:flatView(medians,mcls,'B = group medians')});
+    k=select(medians,Math.ceil(medians.length/2),ctx,'pivot');
+    const gv=guaranteeView(sg,k);
+    const bound=Math.max(n-1-gv.low,n-1-gv.high);
+    ctx.emit({line:'pivot',title:'Pivot k = '+k.v+' (median of medians)',text:'Because k is the median of the group medians, at least '+gv.low+' elements are guaranteed smaller than k and at least '+gv.high+' guaranteed larger (shaded). So whichever side we recurse into has at most '+bound+' of the '+n+' elements.',view:{type:'groups',label:'Groups with guaranteed bounds',groups:gv.groups}});
+  }
+  const S1=[],S2=[];
+  const before2=ctx.cmp;
+  for(const x of arr){if(x===k)continue;(ctx.less(x,k)?S1:S2).push(x);}
+  const c1={},c2={};
+  S1.forEach(x=>{c1[x.id]='small';});S2.forEach(x=>{c2[x.id]='large';});
+  const pc={};pc[k.id]='pivot';
+  ctx.emit({line:'part',title:'Partition around k = '+k.v,text:'Compare every other element with k ('+(ctx.cmp-before2)+' comparisons). |S₁| = '+S1.length+' elements are smaller, |S₂| = '+S2.length+' are larger. k is the '+ordinal(S1.length+1)+' smallest of this call\u2019s elements, and we want the '+ordinal(t)+'.',
+    view:{type:'cols',sections:[
+      {label:'S₁: smaller than k ('+S1.length+')',items:S1.map(it=>({it:it,cls:'small'}))},
+      {label:'Pivot',items:[{it:k,cls:'pivot'}]},
+      {label:'S₂: larger than k ('+S2.length+')',items:S2.map(it=>({it:it,cls:'large'}))}]}});
+  if(S1.length===t-1){
+    result=k;
+    ctx.emit({line:'found',title:'|S₁| = t − 1, so k is the answer',text:'Exactly '+(t-1)+' elements are smaller than k = '+k.v+', so k is the '+ordinal(t)+' smallest.',view:flatView([k],pc)});
+  }else if(S1.length>t-1){
+    ctx.emit({line:'left',title:'|S₁| > t − 1: recurse into S₁',text:'The '+ordinal(t)+' smallest is among the '+S1.length+' smaller elements. Discard k and S₂.',view:flatView(S1,c1,'Continue with S₁')});
+    result=select(S1,t,ctx,'recurse');
+  }else{
+    const t2=t-S1.length-1;
+    ctx.emit({line:'right',title:'|S₁| < t − 1: recurse into S₂',text:'k and all of S₁ are too small. We now need the '+ordinal(t2)+' smallest of S₂ (t − |S₁| − 1 = '+t2+'). Discard k and S₁.',view:flatView(S2,c2,'Continue with S₂')});
+    result=select(S2,t2,ctx,'recurse');
+  }
+  ctx.stack.pop();
+  return result;
+}
+function secItems(items,fn){return items.map(function(it,i){return {it:it,cls:fn?fn(it,i):''};});}
+// Two-halves median: returns the median m of arr AND arr rearranged as [smaller..., m, larger...]
+function halves(arr,ctx,purpose){
+  const n=arr.length,r=Math.ceil(n/2);
+  ctx.stack.push({n:n,t:r,purpose:purpose,arr:arr});
+  ctx.calls++;
+  const tr=ctx.trace;
+  if(tr){
+    const lab={start:'A',h1:'A₁',h2:'A₂',mid:'B'}[purpose];
+    const intro={
+      start:['Start: find the median of '+n+' elements','Median(A) returns the median m of A and also leaves A arranged around it: smaller elements on its left, larger ones on its right. That side effect is what lets the recursion reuse the halves.'],
+      h1:['Recursive call on the first half A₁ ('+n+' elements)','Find the median of A₁ and arrange A₁ around it.'],
+      h2:['Recursive call on the second half A₂ ('+n+' elements)','Find the median of A₂ and arrange A₂ around it.'],
+      mid:['Recursive call on B ('+n+' elements)','B is the middle part we kept. Its median is also the median of the whole array in the call above.']
+    }[purpose];
+    ctx.emit({line:'sig',title:intro[0],text:intro[1],view:{type:'cols',sections:[{label:lab+' ('+n+' elements)',items:secItems(arr)}]}});
+  }
+  if(n<ctx.base){
+    const before=ctx.cmp;
+    const s=insertionSort(arr,ctx);
+    const m=s[r-1];
+    if(tr)ctx.emit({line:'base',title:'Base case: sort and read off the median',text:'Only '+n+' elements (fewer than '+ctx.base+'), so sort them directly ('+(ctx.cmp-before)+' comparisons). The median is element number '+r+', and sorted order is already “arranged around the median”.',view:{type:'cols',row:true,sections:[{label:'Smaller',items:secItems(s.slice(0,r-1),function(){return 'small';})},{label:'Median',items:secItems([m],function(){return 'pivot';})},{label:'Larger',items:secItems(s.slice(r),function(){return 'large';})}]}});
+    ctx.stack.pop();
+    return {m:m,arr:s};
+  }
+  const h1=Math.floor(n/2),A1=arr.slice(0,h1),A2=arr.slice(h1),h2=A2.length;
+  if(tr)ctx.emit({line:'split',title:'Split into two halves',text:'A₁ is the first '+h1+' elements and A₂ the remaining '+h2+'. Recursively find the median of each half.',view:{type:'cols',row:true,sections:[{label:'A₁ ('+h1+')',items:secItems(A1)},{label:'A₂ ('+h2+')',items:secItems(A2)}]}});
+  const r1=halves(A1,ctx,'h1'),r2=halves(A2,ctx,'h2');
+  const m1=r1.m,m2=r2.m,a1=r1.arr,a2=r2.arr;
+  const k1=Math.ceil(h1/2)-1,u1=h1-Math.ceil(h1/2),k2=Math.ceil(h2/2)-1,u2=h2-Math.ceil(h2/2);
+  if(tr)ctx.emit({line:'meds',title:'Medians of the halves: m₁ = '+m1.v+', m₂ = '+m2.v,text:'Each half is now arranged around its own median (ringed): smaller elements on the left, larger ones on the right. Next we compare m₁ with m₂.',view:{type:'cols',row:true,sections:[
+    {label:'A₁ around m₁ = '+m1.v,items:secItems(a1,function(it,i){return i<k1?'small':i===k1?'median':'large';})},
+    {label:'A₂ around m₂ = '+m2.v,items:secItems(a2,function(it,i){return i<k2?'small':i===k2?'median':'large';})}]}});
+  const lt=ctx.less(m1,m2);
+  let p,Dlow,Dhigh,keep1,keep2,why;
+  if(lt){
+    p=Math.min(k1,u2);Dlow=a1.slice(0,p);keep1=a1.slice(p);Dhigh=a2.slice(h2-p);keep2=a2.slice(0,h2-p);
+    why='m₁ = '+m1.v+' < m₂ = '+m2.v+' (1 comparison), so m₁ ≤ m ≤ m₂, where m is the median of A. A₁ has '+k1+' elements below m₁ and A₂ has '+u2+' above m₂. All of them lie on the wrong side of the median, so discard p = min('+k1+', '+u2+') = '+p+' from each end.';
+  }else{
+    p=Math.min(u1,k2);Dhigh=a1.slice(h1-p);keep1=a1.slice(0,h1-p);Dlow=a2.slice(0,p);keep2=a2.slice(p);
+    why='m₁ = '+m1.v+' > m₂ = '+m2.v+' (1 comparison), so m₂ ≤ m ≤ m₁, where m is the median of A. A₁ has '+u1+' elements above m₁ and A₂ has '+k2+' below m₂. All of them lie on the wrong side of the median, so discard p = min('+u1+', '+k2+') = '+p+' from each end.';
+  }
+  const B=keep1.concat(keep2);
+  if(tr)ctx.emit({line:'cmp',title:lt?'m₁ < m₂: drop the low end of A₁ and the high end of A₂':'m₁ > m₂: drop the high end of A₁ and the low end of A₂',text:why+' Dropping equally many from both ends keeps the median the median. B keeps the remaining '+B.length+' elements.',view:{type:'cols',row:true,sections:[
+    {label:'Dropped: '+p+' known smaller than m',items:secItems(Dlow,function(){return 'small';})},
+    {label:'B: kept ('+B.length+')',items:secItems(B,function(it){return (it===m1||it===m2)?'median':'';})},
+    {label:'Dropped: '+p+' known larger than m',items:secItems(Dhigh,function(){return 'large';})}]}});
+  const rb=halves(B,ctx,'mid');
+  const m=rb.m;
+  ctx.moves+=n;
+  const out=Dlow.concat(rb.arr,Dhigh);
+  if(tr){
+    const idx=rb.arr.indexOf(m);
+    ctx.emit({line:'combine',title:'Median of B is m = '+m.v+', the median of A',text:'The median of B is also the median of A, because we dropped as many elements below it as above it. Put the '+p+' dropped small elements back on the left and the '+p+' dropped large ones on the right, so A is arranged around m for the caller. Rebuilding costs about n = '+n+' element moves, the “+ n” in T(n) = 3T(n/2) + n.',view:{type:'cols',row:true,sections:[
+      {label:'Restored: '+p+' smaller',items:secItems(Dlow,function(){return 'small';})},
+      {label:'B, arranged around m',items:secItems(rb.arr,function(it,i){return i<idx?'small':i===idx?'pivot':'large';})},
+      {label:'Restored: '+p+' larger',items:secItems(Dhigh,function(){return 'large';})}]}});
+  }
+  ctx.stack.pop();
+  return {m:m,arr:out};
+}
+function runSelect(vals,t,opts){
+  const ctx=makeCtx(opts);
+  const items=makeItems(vals);
+  if(opts.alg==='halves'){const h=halves(items,ctx,'start');return {ctx:ctx,result:h.m,arr:h.arr,items:items};}
+  const res=select(items,t,ctx,'start');
+  return {ctx:ctx,result:res,items:items};
+}
+// ==END CORE==
+
+// ---------- UI ----------
+const $=id=>document.getElementById(id);
+const S={vals:[],alg:'mom',b:5,base:8,t:20,seed:1,frames:[],i:0,timer:null,result:null,ok:true,custom:false,note:''};
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randomVals(n){const pool=[];for(let i=1;i<=Math.max(99,n*2);i++)pool.push(i);return shuffle(pool).slice(0,n);}
+function pseudo(){
+  const b=S.b,base=S.base;
+  if(S.alg==='halves')return [
+    ['sig','Median(A):   // also arranges A around m'],
+    ['base','  if |A| < '+Math.max(base,6)+': sort A, return its median'],
+    ['split','  split A into halves A₁, A₂'],
+    ['meds','  m₁ = Median(A₁);  m₂ = Median(A₂)'],
+    ['cmp','  if m₁ < m₂:'],
+    ['cmp','    drop p smaller from A₁, p larger from A₂'],
+    ['cmp','  else:'],
+    ['cmp','    drop p larger from A₁, p smaller from A₂'],
+    ['cmp','  B = what remains   // |B| ≈ n/2'],
+    ['rec','  m = Median(B)'],
+    ['combine','  restore the dropped elements around m'],
+    ['combine','  return m']];
+  if(S.alg==='mom')return [
+    ['sig','FIND(A, t):   // t-th smallest'],
+    ['base','  if |A| < '+base+': sort A, return A[t]'],
+    ['divide','  divide A into groups of '+b],
+    ['sortg','  sort each group'],
+    ['med','  B = { median of each group }'],
+    ['pivot','  k = FIND(B, ⌈|B|/2⌉)'],
+    ['part','  S₁ = {x < k},  S₂ = {x > k}'],
+    ['found','  if |S₁| = t−1: return k'],
+    ['left','  else if |S₁| > t−1: return FIND(S₁, t)'],
+    ['right','  else: return FIND(S₂, t−|S₁|−1)']];
+  return [
+    ['sig','FIND(A, t):   // t-th smallest'],
+    ['base','  if |A| < '+base+': sort A, return A[t]'],
+    ['pivot','  choose a pivot k at random'],
+    ['part','  S₁ = {x < k},  S₂ = {x > k}'],
+    ['found','  if |S₁| = t−1: return k'],
+    ['left','  else if |S₁| > t−1: return FIND(S₁, t)'],
+    ['right','  else: return FIND(S₂, t−|S₁|−1)']];
+}
+function rebuild(keepStep){
+  stop();
+  const n=S.vals.length;
+  S.t=S.alg==='halves'?Math.ceil(n/2):Math.min(Math.max(1,S.t),n);
+  $('t').value=S.t;$('t').max=n;
+  const r=runSelect(S.vals,S.t,{alg:S.alg,b:S.b,base:S.base,trace:true,seed:S.seed});
+  const sorted=r.items.slice().sort((a,b)=>a.v-b.v||a.id-b.id);
+  let ok=(sorted[S.t-1]===r.result);
+  const total=r.ctx.cmp,frames=r.ctx.frames;
+  let finalView,finalText,finalMsg;
+  if(S.alg==='halves'){
+    const idx=S.t-1,arr=r.arr;
+    ok=ok&&arr[idx]===r.result&&arr.slice(0,idx).every(x=>rawLess(x,r.result))&&arr.slice(idx+1).every(x=>rawLess(r.result,x));
+    finalView={type:'cols',row:true,sections:[
+      {label:'Smaller than m',items:secItems(arr.slice(0,idx),()=>'small')},
+      {label:'Median m',items:secItems([r.result],()=>'pivot')},
+      {label:'Larger than m',items:secItems(arr.slice(idx+1),()=>'large')}]};
+    finalText='Total: '+total+' comparisons and '+r.ctx.moves+' element moves in '+r.ctx.calls+' recursive calls. The recurrence T(n) = 3T(n/2) + n solves to about n^1.58, which outgrows the n·log₂ n cost of simply sorting, so for large n sorting first is better (the experiment below shows this).';
+    finalMsg=ok?'✓ Matches the median of the sorted array, and A ends up arranged around it.':'✗ Does not match the sorted array.';
+  }else{
+    const cls={};cls[r.result.id]='pivot';
+    finalView=flatView(r.items,cls,'Original array');
+    finalText='Total comparisons: '+total+' ('+(total/n).toFixed(2)+' per element). For comparison, sorting the whole array would take roughly n·log₂ n ≈ '+Math.round(n*Math.log2(n))+' comparisons.';
+    finalMsg=ok?'✓ Matches the '+ordinal(S.t)+' element of the sorted array.':'✗ Does not match the sorted array.';
+  }
+  S.ok=ok;S.result=r.result;S.items=r.items;
+  const hint=(S.alg==='halves'&&frames.length>59)?'This run has '+(frames.length+1)+' steps. A smaller array (around 20 elements) or a larger base case gives a shorter walkthrough.':(S.alg==='halves'?S.note:'');
+  $('lenHint').textContent=hint;$('lenHint').hidden=!hint;
+  frames.push({line:null,title:'Done: the '+ordinal(S.t)+' smallest is '+r.result.v,text:finalText,final:finalMsg,view:finalView,stack:[],cmp:total,moves:r.ctx.moves});
+  S.frames=frames;
+  S.i=keepStep?Math.min(S.i,frames.length-1):0;
+  $('scrub').max=frames.length-1;
+  $('stepTot').textContent=frames.length;
+  renderCode();
+  render();
+}
+function renderCode(){
+  $('code').innerHTML=pseudo().map(l=>'<div class="pl" data-k="'+l[0]+'">'+l[1].replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>').join('');
+}
+function cellHTML(c){return '<span class="cell '+(c.cls||'')+'" title="value '+c.it.v+'">'+c.it.v+'</span>';}
+function render(){
+  const f=S.frames[S.i];
+  let h='';
+  if(f.view.type==='cols'){
+    let secs='';
+    for(const s of f.view.sections){
+      secs+='<div class="sec">'+(s.label?'<div class="sec-label">'+s.label+'</div>':'')+'<div class="cells">'+(s.items.length?s.items.map(cellHTML).join(''):'<span class="empty">(empty)</span>')+'</div></div>';
+    }
+    h+=f.view.row?'<div class="secs-row">'+secs+'</div>':secs;
+  }else{
+    h+='<div class="sec"><div class="sec-label">'+f.view.label+'</div><div class="groups">'+f.view.groups.map((g,gi)=>'<div class="gcol"><div class="gcell-label">G'+(gi+1)+'</div>'+g.map(cellHTML).join('')+'</div>').join('')+'</div></div>';
+  }
+  const shown=new Set();
+  if(f.view.type==='cols')f.view.sections.forEach(s=>s.items.forEach(c=>shown.add(c.it.id)));
+  else f.view.groups.forEach(g=>g.forEach(c=>shown.add(c.it.id)));
+  const st=f.stack||[],blurGroups=[];
+  if(st.length){
+    const g0=st[st.length-1].arr.filter(it=>!shown.has(it.id));
+    if(g0.length)blurGroups.push(['Other elements of this call',g0]);
+  }
+  for(let d=1;d<st.length;d++){
+    const inChild=new Set(st[st.length-d].arr.map(it=>it.id));
+    const part=st[st.length-1-d].arr.filter(it=>!inChild.has(it.id));
+    if(part.length)blurGroups.push(['Rest of the call '+(d===1?'above':d===2?'two levels up':d+' levels up'),part]);
+  }
+  blurGroups.forEach(g=>{
+    h+='<div class="sec rest" aria-hidden="true"><div class="sec-label">'+g[0]+' ('+g[1].length+')</div><div class="cells">'+g[1].map(it=>'<span class="cell">'+it.v+'</span>').join('')+'</div></div>';
+  });
+  $('stage').innerHTML=h;
+  $('exTitle').textContent=f.title;
+  $('exText').textContent=f.text;
+  $('exFinal').textContent=f.final||'';
+  $('stepNo').textContent=S.i+1;
+  $('cmp').textContent=f.cmp;$('moves').textContent=f.moves||0;
+  $('scrub').value=S.i;
+  $('first').disabled=$('prev').disabled=S.i===0;
+  $('next').disabled=$('last').disabled=S.i===S.frames.length-1;
+  document.querySelectorAll('.pl').forEach(el=>el.classList.toggle('on',el.dataset.k===f.line));
+  const N=S.vals.length;
+  $('stack').innerHTML=f.stack.length?f.stack.map((s,i)=>{
+    const lab={start:'initial call',pivot:'pivot search',recurse:'narrowing',h1:'first half A₁',h2:'second half A₂',mid:'middle part B'}[s.purpose];
+    return '<div class="frame'+(i===f.stack.length-1?' on':'')+'" style="margin-left:'+Math.min(i,8)*10+'px"><div class="top"><span>'+(S.alg==='halves'?'Median(n = '+s.n+')':'FIND(n = '+s.n+', t = '+s.t+')')+'</span><span>'+lab+'</span></div><div class="bar"><i style="width:'+Math.max(2,s.n/N*100)+'%"></i></div></div>';
+  }).join(''):'<p class="hint">All calls have returned.</p>';
+}
+function go(i){S.i=Math.max(0,Math.min(S.frames.length-1,i));render();}
+function stop(){if(S.timer){clearInterval(S.timer);S.timer=null;}$('play').textContent='▶ Play';}
+function play(){
+  if(S.timer){stop();return;}
+  if(S.i>=S.frames.length-1)S.i=0;
+  $('play').textContent='❚❚ Pause';
+  render();
+  S.timer=setInterval(()=>{if(S.i>=S.frames.length-1){stop();return;}go(S.i+1);if(S.i>=S.frames.length-1)stop();},+$('speed').value);
+}
+const DESC={
+  mom:'FIND(A, t) with the pivot chosen as the median of the group medians. Works for any t and guarantees linear time.',
+  rand:'FIND(A, t) with a pivot chosen uniformly at random. Works for any t; expected linear time but no worst-case guarantee.',
+  halves:'Finds the median only. Compute the medians of the two halves, discard equally many elements from each end, and recurse on what is left: T(n) = 3T(n/2) + n.'
+};
+function legendHTML(a){
+  const sw=(bg,extra)=>'<i style="background:'+bg+(extra||'')+'"></i>';
+  const ring=';box-shadow:0 0 0 2px var(--median-ring)';
+  if(a==='halves')return '<span>'+sw('var(--pivot)')+'median m of the whole call</span><span>'+sw('var(--bg)',ring)+'median of a half (m₁, m₂)</span><span>'+sw('var(--small-bg)')+'smaller than the highlighted median</span><span>'+sw('var(--large-bg)')+'larger than the highlighted median</span>';
+  return '<span>'+sw('var(--pivot)')+'pivot k</span><span>'+sw('var(--bg)',ring)+'group median</span><span>'+sw('var(--small-bg)')+'smaller than k</span><span>'+sw('var(--large-bg)')+'larger than k</span>';
+}
+function applyModeUI(a){
+  S.alg=a;
+  $('algMom').setAttribute('aria-pressed',a==='mom');
+  $('algRand').setAttribute('aria-pressed',a==='rand');
+  $('algHalves').setAttribute('aria-pressed',a==='halves');
+  $('b').disabled=a!=='mom';
+  for(const o of $('base').options){if(+o.value<6)o.disabled=(a==='halves');}
+  if(a==='halves'&&S.base<6){S.base=6;$('base').value='6';}
+  $('newSeed').disabled=a!=='rand';
+  $('t').disabled=$('medBtn').disabled=a==='halves';
+  $('baseLbl').textContent=a==='halves'?'Base case: sort if |A| < (at least 6)':'Base case: sort if |A| <';
+  $('algDesc').textContent=DESC[a];
+  $('legend').innerHTML=legendHTML(a);
+  $('movesWrap').hidden=a!=='halves';
+}
+function setAlg(a){
+  applyModeUI(a);
+  S.note='';
+  if(a==='halves'&&!S.custom&&S.vals.length>24){
+    S.vals=randomVals(20);
+    $('n').value=20;$('nOut').textContent=20;
+    S.note='Array size set to 20 to keep the walkthrough short. Use the size slider for other lengths.';
+  }
+  rebuild(false);
+}
+function newArray(){
+  const n=+$('n').value;
+  S.vals=randomVals(n);
+  S.t=Math.ceil(n/2);
+  S.seed=Math.floor(Math.random()*1e9)+1;
+  S.custom=false;S.note='';
+  $('err').textContent='';
+  rebuild(false);
+}
+function useCustom(){
+  const parts=$('custom').value.split(/[\s,;]+/).filter(Boolean);
+  const nums=parts.map(Number);
+  if(nums.length<2){$('err').textContent='Enter at least two numbers, separated by commas or spaces.';return;}
+  if(nums.length>150){$('err').textContent='Please use at most 150 numbers.';return;}
+  if(nums.some(x=>!Number.isFinite(x)||!Number.isInteger(x)||Math.abs(x)>99999)){$('err').textContent='Use whole numbers between -99999 and 99999.';return;}
+  $('err').textContent='';
+  S.custom=true;S.note='';
+  S.vals=nums;
+  S.t=Math.ceil(nums.length/2);
+  $('n').value=Math.min(60,Math.max(5,nums.length));$('nOut').textContent=nums.length;
+  rebuild(false);
+}
+
+// ---------- experiment ----------
+const SERIES=[
+  {key:'rand',name:'Random pivot',alg:'rand',b:0,color:'var(--s-rand)'},
+  {key:'b3',name:'Median of medians, b = 3',alg:'mom',b:3,color:'var(--s-b3)'},
+  {key:'b5',name:'Median of medians, b = 5',alg:'mom',b:5,color:'var(--s-b5)'},
+  {key:'b7',name:'Median of medians, b = 7',alg:'mom',b:7,color:'var(--s-b7)'}
+];
+const SIZES=[100,200,400,800,1600,3200,6400,12800],TRIALS=5;
+const HALVES={key:'halves',name:'Two halves (compares + moves)',alg:'halves',b:0,color:'var(--s-half)'};
+function niceStep(max){const raw=max/5,p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p;}
+async function runExperiment(){
+  const btn=$('runExp');btn.disabled=true;
+  const list=SERIES.concat($('inclHalves').checked?[HALVES]:[]);
+  const res={};list.forEach(s=>{res[s.key]=[];});
+  for(let si=0;si<SIZES.length;si++){
+    const n=SIZES[si];
+    $('expStatus').textContent='Running n = '+n+' …';
+    await new Promise(r=>setTimeout(r,20));
+    const sums={};list.forEach(s=>{sums[s.key]=0;});
+    for(let tr=0;tr<TRIALS;tr++){
+      const vals=[];for(let i=1;i<=n;i++)vals.push(i);shuffle(vals);
+      for(const s of list){
+        const r=runSelect(vals,Math.ceil(n/2),{alg:s.alg,b:s.b||5,base:S.base,trace:false,seed:tr*7919+n});
+        sums[s.key]+=s.alg==='halves'?r.ctx.cmp+r.ctx.moves:r.ctx.cmp;
+      }
+    }
+    list.forEach(s=>res[s.key].push(sums[s.key]/TRIALS/n));
+  }
+  drawChart(res,list);
+  $('expStatus').textContent='Done. Averages of '+TRIALS+' random arrays per size, finding the median.';
+  btn.disabled=false;btn.textContent='Run again';
+}
+function drawChart(res,list){
+  const W=700,H=300,L=46,R=14,T=14,B=38;
+  const ref=SIZES.map(n=>Math.log2(n));
+  let ymax=0;list.forEach(s=>res[s.key].forEach(v=>{ymax=Math.max(ymax,v);}));ymax=Math.max(ymax,ref[ref.length-1]);
+  const step=niceStep(ymax);ymax=Math.ceil(ymax/step)*step;
+  const x=i=>L+(W-L-R)*i/(SIZES.length-1);
+  const y=v=>H-B-(H-B-T)*v/ymax;
+  let g='';
+  for(let v=0;v<=ymax+1e-9;v+=step){g+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+v+'</text>';}
+  SIZES.forEach((n,i)=>{g+='<text x="'+x(i)+'" y="'+(H-B+18)+'" text-anchor="middle">'+n+'</text>';});
+  g+='<text x="'+((L+W-R)/2)+'" y="'+(H-4)+'" text-anchor="middle">array size n (each step doubles)</text>';
+  g+='<text transform="translate(12 '+((T+H-B)/2)+') rotate(-90)" text-anchor="middle">cost per element</text>';
+  const pts=arr=>arr.map((v,i)=>x(i)+','+y(v)).join(' ');
+  g+='<polyline fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5" points="'+pts(ref)+'"/>';
+  list.forEach(s=>{
+    g+='<polyline fill="none" stroke="'+s.color+'" stroke-width="2.5" stroke-linejoin="round" points="'+pts(res[s.key])+'"/>';
+    res[s.key].forEach((v,i)=>{g+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3" fill="'+s.color+'"/>';});
+  });
+  $('chart').innerHTML=g;
+  $('chart').setAttribute('aria-label','Cost per element versus array size');
+  $('keys').innerHTML=list.map(s=>'<span><i style="background:'+s.color+'"></i>'+s.name+'</span>').join('')+'<span><i style="background:var(--muted)"></i>log₂ n (about what sorting needs)</span>';
+  let t='<tr><th>n</th>'+list.map(s=>'<th>'+s.name+'</th>').join('')+'<th>log₂ n</th></tr>';
+  SIZES.forEach((n,i)=>{t+='<tr><td>'+n+'</td>'+list.map(s=>'<td>'+res[s.key][i].toFixed(2)+'</td>').join('')+'<td>'+ref[i].toFixed(2)+'</td></tr>';});
+  $('tbl').innerHTML=t;
+  $('halvesNote').hidden=!list.includes(HALVES);
+  $('chartBox').hidden=false;
+}
+
+// ---------- wiring ----------
+$('algMom').onclick=()=>setAlg('mom');
+$('algRand').onclick=()=>setAlg('rand');
+$('algHalves').onclick=()=>setAlg('halves');
+$('b').onchange=()=>{S.b=+$('b').value;rebuild(false);};
+$('base').onchange=()=>{S.base=+$('base').value;rebuild(false);};
+$('n').oninput=()=>{$('nOut').textContent=$('n').value;};
+$('n').onchange=newArray;
+$('t').onchange=()=>{S.t=Math.round(+$('t').value)||1;rebuild(false);};
+$('medBtn').onclick=()=>{S.t=Math.ceil(S.vals.length/2);rebuild(false);};
+$('newArr').onclick=newArray;
+$('newSeed').onclick=()=>{S.seed=Math.floor(Math.random()*1e9)+1;rebuild(false);};
+$('useCustom').onclick=useCustom;
+$('custom').onkeydown=e=>{if(e.key==='Enter')useCustom();};
+$('first').onclick=()=>{stop();go(0);};
+$('prev').onclick=()=>{stop();go(S.i-1);};
+$('next').onclick=()=>{stop();go(S.i+1);};
+$('last').onclick=()=>{stop();go(S.frames.length-1);};
+$('play').onclick=play;
+$('scrub').oninput=()=>{stop();go(+$('scrub').value);};
+$('speed').onchange=()=>{if(S.timer){stop();play();}};
+$('runExp').onclick=runExperiment;
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'&&e.target.type!=='range'||tag==='select'||tag==='textarea')return;
+  if(e.key==='ArrowRight'){stop();go(S.i+1);e.preventDefault();}
+  else if(e.key==='ArrowLeft'){stop();go(S.i-1);e.preventDefault();}
+  else if(e.key===' '&&tag!=='button'){play();e.preventDefault();}
+});
+applyModeUI('mom');
+newArray();
+</script>
+</body>
+</html>
